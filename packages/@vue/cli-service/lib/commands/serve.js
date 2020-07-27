@@ -31,6 +31,7 @@ module.exports = (api, options) => {
   }, async function serve (args) {
     info('Starting development server...')
 
+    // 尽管这个主要是一个开发服务器，我们运行它在生产环境是可能的
     // although this is primarily a dev server, it is possible that we
     // are running it in a mode with a production env, e.g. in E2E tests.
     const isInContainer = checkInContainer()
@@ -159,16 +160,16 @@ module.exports = (api, options) => {
       addDevClientToEntry(webpackConfig, devClients)
     }
 
-    // create compiler
+    // create compiler 创建编译器
     const compiler = webpack(webpackConfig)
 
-    // handle compiler error
+    // handle compiler error 初始编译错误
     compiler.hooks.failed.tap('vue-cli-service serve', msg => {
       error(msg)
       process.exit(1)
     })
 
-    // create server
+    // create server 创建服务器
     const server = new WebpackDevServer(compiler, Object.assign({
       logLevel: 'silent',
       clientLogLevel: 'silent',

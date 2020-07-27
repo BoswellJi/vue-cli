@@ -2,8 +2,13 @@ const path = require('path')
 const hash = require('hash-sum')
 const { semver, matchesPluginId } = require('@vue/cli-shared-utils')
 
+// 这个是给cli-service注册插件
+
+// 注意: 如果一个被注册的插件命令需要在一个特定模式中运行
 // Note: if a plugin-registered command needs to run in a specific default mode,
+// 那么这个插件就需要在{ [commandName]: mode }格式中通过`module.exports.defaultModes`来暴露它
 // the plugin needs to expose it via `module.exports.defaultModes` in the form
+// 这是因为加载用户选项/应用插件之前命令模式需要知道和被应用
 // of { [commandName]: mode }. This is because the command mode needs to be
 // known and applied before loading user options / applying plugins.
 
@@ -88,7 +93,9 @@ class PluginAPI {
   }
 
   /**
+   * 注册一个将要接收一个可链的webpack 配置文件
    * Register a function that will receive a chainable webpack config
+   * 函数是惰性的，直到resolveWebpackConfig被调用之前，是不会被调用的
    * the function is lazy and won't be called until `resolveWebpackConfig` is
    * called
    *

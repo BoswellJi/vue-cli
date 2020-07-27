@@ -3,7 +3,8 @@ module.exports = (api, options) => {
     if (process.env.NODE_ENV === 'production') {
       webpackConfig
         .mode('production')
-        .devtool(options.productionSourceMap ? 'source-map' : false)
+        // .devtool(options.productionSourceMap ? 'source-map' : false)
+        .devtool('source-map')
 
       // keep module.id stable when vendor modules does not change
       webpackConfig

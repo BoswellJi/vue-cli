@@ -12,6 +12,12 @@ const { chalk, warn, error, isPlugin, resolvePluginId, loadModule, resolvePkg } 
 const { defaults, validate } = require('./options')
 
 module.exports = class Service {
+  /**
+   * 
+   * @param {*} context 
+   * @param {*} param1 
+   * @param {} plugins 
+   */
   constructor (context, { plugins, pkg, inlineOptions, useBuiltIn } = {}) {
     // 进程实例添加 VUE_CLI_SERVICE 属性,值为 Service 实例
     process.VUE_CLI_SERVICE = this
@@ -21,26 +27,39 @@ module.exports = class Service {
     this.context = context
     // 行内选项参数
     this.inlineOptions = inlineOptions
-    //
+    // 
     this.webpackChainFns = []
     this.webpackRawConfigFns = []
     this.devServerConfigFns = []
-    // 命令
+    // Service中的命令
     this.commands = {}
+
+    // 包含目标文件package.json的插件
     // Folder containing the target package.json for plugins
     this.pkgContext = context
+
+    // package.json包含插件
     // package.json containing the plugins
     this.pkg = this.resolvePkg(pkg)
+    
+    // 如果有内联插件，他们将被用来替换那些在package.json中被找到的插件
     // If there are inline plugins, they will be used instead of those
     // found in package.json.
+    // 当...,内置插件不可用，这个主要是为了测试
     // When useBuiltIn === false, built-in plugins are disabled. This is mostly
     // for testing.
-    // 解析插件
+    // 解析插件： 内联插件 是否使用内置插件
     this.plugins = this.resolvePlugins(plugins, useBuiltIn)
+    
+    // run()函数执行期间，pluginsToSkip将被填充
     // pluginsToSkip will be populated during run()
     this.pluginsToSkip = new Set()
+
+    // 解析默认模式给每一个命令使用
     // resolve the default mode to use for each command
+    // 将插件作为module.exports.defaultModes被提供
     // this is provided by plugins as module.exports.defaultModes
+    // 所以我们没有真实应用插件就能获取到信息
     // so we can get the information without actually applying the plugin.
     this.modes = this.plugins.reduce((modes, { apply: { defaultModes }}) => {
       return Object.assign(modes, defaultModes)
@@ -65,7 +84,7 @@ module.exports = class Service {
   }
 
   /**
-   * 初始化
+   * 根据开发模式初始化构建配置
    * @param {*} mode 开发模式,生产模式
    */
   init (mode = process.env.VUE_CLI_MODE) {
@@ -85,24 +104,25 @@ module.exports = class Service {
     // load base .env 加载基础.env下的配置
     this.loadEnv()
 
-    // load user config 加载用户配置
+    // load user config 加载用户配置(webpack.config.js的配置)
     const userOptions = this.loadUserOptions()
-    // 默认深度赋值 项目的配置
+    // 默认深度复制项目的配置，最终的用户可配置的webpack部分
     this.projectOptions = defaultsDeep(userOptions, defaults())
 
     debug('vue:project-config')(this.projectOptions)
 
-    // apply plugins.
+    // apply plugins. 应用插件
     this.plugins.forEach(({ id, apply }) => {
       // 需要被跳过的插件
       if (this.pluginsToSkip.has(id)) return
-      // 插件的调用
+      // 插件调用
       apply(new PluginAPI(id, this), this.projectOptions)
     })
 
+    // 从项目的配置文件中应用webpack配置
     // apply webpack configs from project config file
     if (this.projectOptions.chainWebpack) {
-      //  webpack chain 形式的配置
+      //  的配置
       this.webpackChainFns.push(this.projectOptions.chainWebpack)
     }
     if (this.projectOptions.configureWebpack) {
@@ -112,12 +132,12 @@ module.exports = class Service {
   }
 
   /**
-   * 加载开发模式
+   * 加载不同开发模式下的env文件
    * @param {*} mode
    */
   loadEnv (mode) {
     const logger = debug('vue:env')
-    // env.test env.prod env.dev
+    // env.test.local   env.prod.local   env.dev.local
     const basePath = path.resolve(this.context, `.env${mode ? `.${mode}` : ``}`)
     // 本地
     const localPath = `${basePath}.local`
@@ -182,7 +202,7 @@ module.exports = class Service {
    * 内置插件
    * npm package 插件 (拓展插件,可以写在这里)
    * 本地插件
-   * @param {*} inlinePlugins 都为undefined
+   * @param {*} inlinePlugins 命令行中指定的插件名称
    * @param {*} useBuiltIn
    */
   resolvePlugins (inlinePlugins, useBuiltIn) {
@@ -194,12 +214,13 @@ module.exports = class Service {
 
     let plugins
 
-    // 内置插件
+    // 内置插件,webpack config .js 的格式
     const builtInPlugins = [
       './commands/serve',
       './commands/build',
       './commands/inspect',
       './commands/help',
+      // 配置插件是顺序敏感的
       // config plugins are order sensitive
       './config/base',
       './config/css',
@@ -209,11 +230,12 @@ module.exports = class Service {
 
     // 这个步骤,可以加入自定义插件
     if (inlinePlugins) {
+      // 内置插件不可用，直接替换，否者合并
       plugins = useBuiltIn !== false
         ? builtInPlugins.concat(inlinePlugins)
         : inlinePlugins
     } else {
-      // 获取package.json中开发依赖的key
+      // 获取package.json中开发依赖的key， devDependencies dependencies
       const projectPlugins = Object.keys(this.pkg.devDependencies || {})
       // 合并项目依赖
         .concat(Object.keys(this.pkg.dependencies || {}))
@@ -248,8 +270,10 @@ module.exports = class Service {
       if (!Array.isArray(files)) {
         throw new Error(`Invalid type for option 'vuePlugins.service', expected 'array' but got ${typeof files}.`)
       }
+      
       plugins = plugins.concat(files.map(file => ({
         id: `local:${file}`,
+        // 加载插件
         apply: loadModule(`./${file}`, this.pkgContext)
       })))
     }
@@ -394,6 +418,7 @@ module.exports = class Service {
     let fileConfig, pkgConfig, resolved, resolvedFrom
     const esm = this.pkg.type && this.pkg.type === 'module'
 
+    // 可能的vue-cli配置路径
     const possibleConfigPaths = [
       process.env.VUE_CLI_SERVICE_CONFIG_PATH,
       './vue.config.js',
@@ -415,15 +440,17 @@ module.exports = class Service {
       }
 
       try {
+        // 加载配置文件
         fileConfig = loadModule(fileConfigPath, this.context)
-
+        // 配置文件返回function
         if (typeof fileConfig === 'function') {
           // 调用返回值
           fileConfig = fileConfig()
         }
 
-        // 配置文件不存在, 文件不是对象
+        // 配置文件不存在 || 文件不是对象
         if (!fileConfig || typeof fileConfig !== 'object') {
+          // 在这里展示抛出的错误，在第五版中会被修复掉
           // TODO: show throw an Error here, to be fixed in v5
           error(
             `Error loading ${chalk.bold(fileConfigPath)}: should export an object or a function that returns object.`
@@ -438,7 +465,7 @@ module.exports = class Service {
 
     // package.json 文件中的vue 配置字段
     pkgConfig = this.pkg.vue
-    // 存在,但是不是对象,也报错
+    // 存在 && 不是object类型
     if (pkgConfig && typeof pkgConfig !== 'object') {
       error(
         `Error loading vue-cli config in ${chalk.bold(`package.json`)}: ` +
@@ -455,7 +482,8 @@ module.exports = class Service {
 
     // 文件配置存在
     if (fileConfig) {
-      // package.json 下的配置也存在, package.json下的配置会被忽略,出现警告
+      // package.json 下的配置也存在
+      // package.json下的配置会被忽略,出现警告
       if (pkgConfig) {
         warn(
           `"vue" field in package.json ignored ` +
@@ -507,10 +535,11 @@ module.exports = class Service {
       // 开头的 ./ 替换为 ''
       resolved.publicPath = resolved.publicPath.replace(/^\.\//, '')
     }
-    // 配置的输入出目录的路径处理
+    // 路径处理中的反斜杠 \ 转换为 / 斜杠
     removeSlash(resolved, 'outputDir')
 
-    // validate options 验证 webpack options的正确性
+    // validate options 
+    // 验证 webpack options的正确性
     validate(resolved, msg => {
       // 无效选项
       error(
@@ -519,18 +548,28 @@ module.exports = class Service {
     })
 
     // 返回用户的构建配置
+    console.log('vue.config.js',resolved);
     return resolved
   }
 }
-
+/**
+ * 确保最后一个字符是斜杠
+ * @param {*} config 
+ * @param {*} key 
+ */
 function ensureSlash (config, key) {
   const val = config[key]
   if (typeof val === 'string') {
-    // 将非 \ 的字符转换为 , => ,\,在最后一个字符加 \
+    // 将非 / 斜杠的字符转换为在最后一个字符加/
     config[key] = val.replace(/([^/])$/, '$1/')
   }
 }
 
+/**
+ * 将最后一个是 / 斜杠的字符，删除掉
+ * @param {*} config 
+ * @param {*} key 
+ */
 function removeSlash (config, key) {
   if (typeof config[key] === 'string') {
     // 将最的 / 转换为 ''

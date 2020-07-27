@@ -1,5 +1,6 @@
 const { exit } = require('./exit')
 
+// 代理到joi来验证选项
 // proxy to joi for option validation
 exports.createSchema = fn => fn(require('@hapi/joi'))
 

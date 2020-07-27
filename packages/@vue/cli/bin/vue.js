@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 
+// 需要/做其他许多事情之前，要检查node版本，用户可能在使用非常老的node版本
 // Check node version before requiring/doing anything else
 // The user may be on a very old node version
 
+/**
+ 
+ */
 const { chalk, semver } = require('@vue/cli-shared-utils')
+// 需要的node版本
 const requiredVersion = require('../package.json').engines.node
 const leven = require('leven')
 
-function checkNodeVersion (wanted, id) {
+function checkNodeVersion(wanted, id) {
   if (!semver.satisfies(process.version, wanted)) {
     console.log(chalk.red(
       'You are using Node ' + process.version + ', but this version of ' + id +
@@ -26,12 +31,17 @@ if (semver.satisfies(process.version, '9.x')) {
     `It's strongly recommended to use an active LTS version instead.`
   ))
 }
+/**
+ * slash: 转换windows反斜杠为斜线路径 '\\a\\b' => /a/b
+ * minimist: 参数解析器，进程参数process.argv,命令行参数解析
+ */
 
 const fs = require('fs')
 const path = require('path')
 const slash = require('slash')
 const minimist = require('minimist')
 
+// 当创建了test 项目，进入调试模式
 // enter debug mode when creating test repo
 if (
   slash(process.cwd()).indexOf('/packages/test') > 0 && (
@@ -42,6 +52,9 @@ if (
   process.env.VUE_CLI_DEBUG = true
 }
 
+/**
+ * commander: nodejs命令行接口工具
+ */
 const program = require('commander')
 const loadCommand = require('../lib/util/loadCommand')
 
@@ -213,6 +226,7 @@ program
     ).then(console.log)
   })
 
+// 在未知的命令上输出有帮助的信息
 // output help information on unknown commands
 program
   .arguments('<command>')
@@ -223,6 +237,7 @@ program
     suggestCommands(cmd)
   })
 
+// 在help命令上添加一些有用的信息
 // add some useful info on help
 program.on('--help', () => {
   console.log()
@@ -232,6 +247,7 @@ program.on('--help', () => {
 
 program.commands.forEach(c => c.on('--help', () => console.log()))
 
+// 增强公共的错误信息
 // enhance common error messages
 const enhanceErrorMessages = require('../lib/util/enhanceErrorMessages')
 
@@ -255,7 +271,7 @@ if (!process.argv.slice(2).length) {
   program.outputHelp()
 }
 
-function suggestCommands (unknownCommand) {
+function suggestCommands(unknownCommand) {
   const availableCommands = program.commands.map(cmd => cmd._name)
 
   let suggestion
@@ -272,13 +288,13 @@ function suggestCommands (unknownCommand) {
   }
 }
 
-function camelize (str) {
+function camelize(str) {
   return str.replace(/-(\w)/g, (_, c) => c ? c.toUpperCase() : '')
 }
 
 // commander passes the Command object itself as options,
 // extract only actual options into a fresh object.
-function cleanArgs (cmd) {
+function cleanArgs(cmd) {
   const args = {}
   cmd.options.forEach(o => {
     const key = camelize(o.long.replace(/^--/, ''))

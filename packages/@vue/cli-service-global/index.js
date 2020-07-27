@@ -10,6 +10,10 @@ const globalConfigPlugin = require('./lib/globalConfigPlugin')
 
 const context = process.cwd()
 
+/**
+ * 警告关于npm脚本
+ * @param {*} cmd 
+ */
 function warnAboutNpmScript (cmd) {
   const packageJsonPath = path.join(context, 'package.json')
 
@@ -37,6 +41,11 @@ function warnAboutNpmScript (cmd) {
   console.log(`Did you mean ${chalk.yellow(script)}?`)
 }
 
+/**
+ * 解析入口
+ * @param {*} entry 
+ * @param {*} cmd 
+ */
 function resolveEntry (entry, cmd) {
   entry = entry || findExisting(context, [
     'main.js',

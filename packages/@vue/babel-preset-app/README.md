@@ -1,5 +1,7 @@
 # @vue/babel-preset-app
 
+exclusively： 专门地
+
 This is the default Babel preset used in all Vue CLI projects. **Note: this preset is meant to be used exclusively in projects created via Vue CLI and does not consider external use cases.**
 
 ## Included Features
@@ -93,6 +95,8 @@ Set to `false` to disable JSX support. Or you can toggle [@vue/babel-preset-jsx]
 ### loose
 
 - Default: `false`.
+
+spec-compliant： 遵循规范的
 
 Setting this to `true` will generate code that is more performant but less spec-compliant.
 

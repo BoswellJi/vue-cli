@@ -1,3 +1,4 @@
+// 开头以@vue/或者vue-或者@（单个字母，数字，下划线）的一个或者0个 加上（单个字母，数字，下划线）一个或多个/vue- cli-plugin-
 const pluginRE = /^(@vue\/|vue-|@[\w-]+(\.)?[\w-]+\/vue-)cli-plugin-/
 const scopeRE = /^@[\w-]+(\.)?[\w-]+\//
 const officialRE = /^@vue\//
@@ -15,6 +16,7 @@ const officialPlugins = [
   'vuex'
 ]
 
+// 的是vue-cli插件
 exports.isPlugin = id => pluginRE.test(id)
 
 exports.isOfficialPlugin = id => exports.isPlugin(id) && officialRE.test(id)
