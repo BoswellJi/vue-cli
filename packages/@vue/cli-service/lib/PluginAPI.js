@@ -69,14 +69,14 @@ class PluginAPI {
   /**
    * Register a command that will become available as `vue-cli-service [name]`.
    *
-   * @param {string} name
+   * @param {string} name 命令名称
    * @param {object} [opts]
    *   {
    *     description: string,
    *     usage: string,
    *     options: { [string]: string }
    *   }
-   * @param {function} fn
+   * @param {function} fn 命令的执行函数
    *   (args: { [string]: string }, rawArgs: string[]) => ?Promise
    */
   registerCommand (name, opts, fn) {

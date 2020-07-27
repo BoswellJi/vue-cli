@@ -20,10 +20,6 @@
     "docs:build": "vuepress build docs",
     "patch-chromedriver": "node scripts/patchChromedriver.js"
   },
-  "gitHooks": {
-    "pre-commit": "lint-staged",
-    "commit-msg": "node scripts/verifyCommitMsg.js"
-  },
   "jest": {
     "testEnvironment": "node",
     "setupFiles": [

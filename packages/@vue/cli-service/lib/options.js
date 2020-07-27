@@ -1,5 +1,8 @@
 const { createSchema, validate } = require('@vue/cli-shared-utils')
 
+/**
+ * webpack config file creator with type valid
+ */
 const schema = createSchema(joi => joi.object({
   publicPath: joi.string().allow(''),
   outputDir: joi.string(),
@@ -78,6 +81,9 @@ function hasMultipleCores () {
   }
 }
 
+/**
+ * 默认的 vue.config.js配置
+ */
 exports.defaults = () => ({
   // project deployment base
   publicPath: '/',

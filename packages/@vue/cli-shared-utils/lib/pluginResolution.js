@@ -21,17 +21,24 @@ exports.isOfficialPlugin = id => exports.isPlugin(id) && officialRE.test(id)
 
 exports.toShortPluginId = id => id.replace(pluginRE, '')
 
+/**
+ * 解析插件id
+ */
 exports.resolvePluginId = id => {
   // already full id
   // e.g. vue-cli-plugin-foo, @vue/cli-plugin-foo, @bar/vue-cli-plugin-foo
+  // 是插件的名称
   if (pluginRE.test(id)) {
+    // 返回插件名称
     return id
   }
 
+  //
   if (id === '@vue/cli-service') {
     return id
   }
 
+  // 官方插件
   if (officialPlugins.includes(id)) {
     return `@vue/cli-plugin-${id}`
   }

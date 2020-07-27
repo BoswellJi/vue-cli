@@ -1,5 +1,10 @@
 const semver = require('semver')
 
+/**
+ * 解析反馈
+ * @param {*} request
+ * @param {*} options
+ */
 function resolveFallback (request, options) {
   const Module = require('module')
   const isMain = false
@@ -29,16 +34,19 @@ function resolveFallback (request, options) {
 }
 
 const resolve = semver.satisfies(process.version, '>=10.0.0')
-  ? require.resolve
-  : resolveFallback
+  ? require.resolve // 解析成功
+  : resolveFallback // 解析反馈
 
+/**
+ * 解析模块
+ */
 exports.resolveModule = function (request, context) {
   let resolvedPath
   try {
     resolvedPath = resolve(request, {
       paths: [context]
     })
-  } catch (e) {}
+  } catch (e) { }
   return resolvedPath
 }
 

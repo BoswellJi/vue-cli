@@ -9,4 +9,5 @@ if (!service || process.env.VUE_CLI_API_MODE) {
   service.init(process.env.VUE_CLI_MODE || process.env.NODE_ENV)
 }
 
+// 编译项目的的webpack配置文件
 module.exports = service.resolveWebpackConfig()
