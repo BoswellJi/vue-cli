@@ -90,7 +90,7 @@ If you are using the PWA plugin, your app must be served over HTTPS so that [Ser
 3. Generate a GitHub [access token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line)
    with repo permissions.
 
-4. Grant the Travis job access to your repository: `travis set GITHUB_TOKEN=xxx`
+4. Grant the Travis job access to your repository: `travis env set GITHUB_TOKEN xxx`
    (`xxx` is the personal access token from step 3.)
 
 5. Create a `.travis.yml` file in the root of your project.
@@ -261,7 +261,7 @@ firebase deploy --only hosting
 
 If you want other Firebase CLI features you use on your project to be deployed, run `firebase deploy` without the `--only` option.
 
-You can now access your project on `https://<YOUR-PROJECT-ID>.firebaseapp.com`.
+You can now access your project on `https://<YOUR-PROJECT-ID>.firebaseapp.com` or `https://<YOUR-PROJECT-ID>.web.app`.
 
 Please refer to the [Firebase Documentation](https://firebase.google.com/docs/hosting/deploying) for more details.
 
@@ -373,7 +373,7 @@ heroku buildpacks:add https://github.com/heroku/heroku-buildpack-static
 git push heroku master
 ```
 
-More info: https://gist.github.com/hone/24b06869b4c1eca701f9
+More info: [Getting started with SPAs on Heroku](https://gist.github.com/hone/24b06869b4c1eca701f9)
 
 ### Surge
 

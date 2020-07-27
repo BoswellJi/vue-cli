@@ -68,7 +68,7 @@ exports.loadOptions = () => {
         `Error loading saved preferences: ` +
         `~/.vuerc may be corrupted or have syntax errors. ` +
         `Please fix/delete it and re-run vue-cli in manual mode.\n` +
-        `(${e.message})`,
+        `(${e.message})`
       )
       exit(1)
     }
@@ -94,6 +94,7 @@ exports.saveOptions = toSave => {
   cachedOptions = options
   try {
     fs.writeFileSync(rcPath, JSON.stringify(options, null, 2))
+    return true
   } catch (e) {
     error(
       `Error saving preferences: ` +
@@ -106,5 +107,5 @@ exports.saveOptions = toSave => {
 exports.savePreset = (name, preset) => {
   const presets = cloneDeep(exports.loadOptions().presets || {})
   presets[name] = preset
-  exports.saveOptions({ presets })
+  return exports.saveOptions({ presets })
 }

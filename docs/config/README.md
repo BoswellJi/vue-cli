@@ -139,7 +139,7 @@ Deprecated since Vue CLI 3.3, please use [`publicPath`](#publicPath) instead.
 ### lintOnSave
 
 - Type: `boolean | 'warning' | 'default' | 'error'`
-- Default: `true`
+- Default: `'default'`
 
   Whether to perform lint-on-save during development using [eslint-loader](https://github.com/webpack-contrib/eslint-loader). This value is respected only when [`@vue/cli-plugin-eslint`](https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint) is installed.
 
@@ -330,7 +330,7 @@ In v3 this means the opposite of `css.requireModuleExtension`.
 
   - Some values like `host`, `port` and `https` may be overwritten by command line flags.
 
-  - Some values like `publicPath` and `historyApiFallback` should not be modified as they need to be synchronized with [publicPath](#baseurl) for the dev server to function properly.
+  - Some values like `publicPath` and `historyApiFallback` should not be modified as they need to be synchronized with [publicPath](#publicPath) for the dev server to function properly.
 
 ### devServer.proxy
 

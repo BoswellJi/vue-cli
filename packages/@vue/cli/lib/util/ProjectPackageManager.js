@@ -1,6 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
 
+const ini = require('ini')
 const minimist = require('minimist')
 const LRU = require('lru-cache')
 
@@ -8,22 +9,27 @@ const {
   chalk,
   execa,
   semver,
+  request,
+
+  resolvePkg,
+  loadModule,
 
   hasYarn,
   hasProjectYarn,
   hasPnpm3OrLater,
   hasPnpmVersionOrLater,
   hasProjectPnpm,
+  hasProjectNpm,
 
   isOfficialPlugin,
   resolvePluginId,
 
   log,
-  warn
+  warn,
+  error
 } = require('@vue/cli-shared-utils')
 
 const { loadOptions } = require('../options')
-const getPackageJson = require('./getPackageJson')
 const { executeCommand } = require('./executeCommand')
 
 const registries = require('./registries')
@@ -79,13 +85,22 @@ function stripVersion (packageName) {
 
 class PackageManager {
   constructor ({ context, forcePackageManager } = {}) {
-    this.context = context
+    this.context = context || process.cwd()
 
     if (forcePackageManager) {
       this.bin = forcePackageManager
     } else if (context) {
-      this.bin = hasProjectYarn(context) ? 'yarn' : hasProjectPnpm(context) ? 'pnpm' : 'npm'
-    } else {
+      if (hasProjectYarn(context)) {
+        this.bin = 'yarn'
+      } else if (hasProjectPnpm(context)) {
+        this.bin = 'pnpm'
+      } else if (hasProjectNpm(context)) {
+        this.bin = 'npm'
+      }
+    }
+
+    // if no package managers specified, and no lockfile exists
+    if (!this.bin) {
       this.bin = loadOptions().packageManager || (hasYarn() ? 'yarn' : hasPnpm3OrLater() ? 'pnpm' : 'npm')
     }
 
@@ -97,6 +112,17 @@ class PackageManager {
         `See if you can use ${chalk.cyan('--registry')} instead.`
       )
       PACKAGE_MANAGER_CONFIG[this.bin] = PACKAGE_MANAGER_CONFIG.npm
+    }
+
+    // Plugin may be located in another location if `resolveFrom` presents.
+    const projectPkg = resolvePkg(this.context)
+    const resolveFrom = projectPkg && projectPkg.vuePlugins && projectPkg.vuePlugins.resolveFrom
+
+    // Logically, `resolveFrom` and `context` are distinct fields.
+    // But in Vue CLI we only care about plugins.
+    // So it is fine to let all other operations take place in the `resolveFrom` directory.
+    if (resolveFrom) {
+      this.context = path.resolve(context, resolveFrom)
     }
   }
 
@@ -115,7 +141,7 @@ class PackageManager {
 
     if (args.registry) {
       this._registry = args.registry
-    } else if (await shouldUseTaobao(this.bin)) {
+    } else if (!process.env.VUE_CLI_TEST && await shouldUseTaobao(this.bin)) {
       this._registry = registries.taobao
     } else {
       try {
@@ -129,11 +155,45 @@ class PackageManager {
     return this._registry
   }
 
-  async addRegistryToArgs (args) {
-    const registry = await this.getRegistry()
-    args.push(`--registry=${registry}`)
+  async getAuthToken () {
+    // get npmrc (https://docs.npmjs.com/configuring-npm/npmrc.html#files)
+    const possibleRcPaths = [
+      path.resolve(this.context, '.npmrc'),
+      path.resolve(require('os').homedir(), '.npmrc')
+    ]
+    if (process.env.PREFIX) {
+      possibleRcPaths.push(path.resolve(process.env.PREFIX, '/etc/npmrc'))
+    }
+    // there's also a '/path/to/npm/npmrc', skipped for simplicity of implementation
 
-    return args
+    let npmConfig = {}
+    for (const loc of possibleRcPaths) {
+      if (fs.existsSync(loc)) {
+        try {
+          // the closer config file (the one with lower index) takes higher precedence
+          npmConfig = Object.assign({}, ini.parse(fs.readFileSync(loc, 'utf-8')), npmConfig)
+        } catch (e) {
+          // in case of file permission issues, etc.
+        }
+      }
+    }
+
+    const registry = await this.getRegistry()
+    const registryWithoutProtocol = registry
+      .replace(/https?:/, '')     // remove leading protocol
+      .replace(/([^/])$/, '$1/')  // ensure ending with slash
+    const authTokenKey = `${registryWithoutProtocol}:_authToken`
+
+    return npmConfig[authTokenKey]
+  }
+
+  async setRegistryEnvs () {
+    const registry = await this.getRegistry()
+
+    process.env.npm_config_registry = registry
+    process.env.YARN_NPM_REGISTRY_SERVER = registry
+
+    this.setBinaryMirrors()
   }
 
   // set mirror urls for users in china
@@ -174,8 +234,10 @@ class PackageManager {
     }
   }
 
-  async getMetadata (packageName, { field = '' } = {}) {
+  // https://github.com/npm/registry/blob/master/docs/responses/package-metadata.md
+  async getMetadata (packageName, { full = false } = {}) {
     const registry = await this.getRegistry()
+    const authToken = await this.getAuthToken()
 
     const metadataKey = `${this.bin}-${registry}-${packageName}`
     let metadata = metadataCache.get(metadataKey)
@@ -184,17 +246,27 @@ class PackageManager {
       return metadata
     }
 
-    const args = await this.addRegistryToArgs(['info', packageName, field, '--json'])
-    const { stdout } = await execa(this.bin, args)
-
-    metadata = JSON.parse(stdout)
-    if (this.bin === 'yarn') {
-      // `yarn info` outputs messages in the form of `{"type": "inspect", data: {}}`
-      metadata = metadata.data
+    const headers = {}
+    if (!full) {
+      headers.Accept = 'application/vnd.npm.install-v1+json;q=1.0, application/json;q=0.9, */*;q=0.8'
     }
 
-    metadataCache.set(metadataKey, metadata)
-    return metadata
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`
+    }
+
+    const url = `${registry.replace(/\/$/g, '')}/${packageName}`
+    try {
+      metadata = (await request.get(url, { headers })).body
+      if (metadata.error) {
+        throw new Error(metadata.error)
+      }
+      metadataCache.set(metadataKey, metadata)
+      return metadata
+    } catch (e) {
+      error(`Failed to get response from ${url}`)
+      throw e
+    }
   }
 
   async getRemoteVersion (packageName, versionRange = 'latest') {
@@ -209,59 +281,76 @@ class PackageManager {
   getInstalledVersion (packageName) {
     // for first level deps, read package.json directly is way faster than `npm list`
     try {
-      const packageJson = getPackageJson(
-        path.resolve(this.context, 'node_modules', packageName)
-      )
+      const packageJson = loadModule(`${packageName}/package.json`, this.context, true)
       return packageJson.version
-    } catch (e) {
-      return 'N/A'
-    }
+    } catch (e) {}
+  }
+
+  async runCommand (command, args) {
+    await this.setRegistryEnvs()
+    return await executeCommand(
+      this.bin,
+      [
+        ...PACKAGE_MANAGER_CONFIG[this.bin][command],
+        ...(args || [])
+      ],
+      this.context
+    )
   }
 
   async install () {
-    await this.setBinaryMirrors()
-    const args = await this.addRegistryToArgs(PACKAGE_MANAGER_CONFIG[this.bin].install)
-    return executeCommand(this.bin, args, this.context)
-  }
-
-  async add (packageName, isDev = true) {
-    await this.setBinaryMirrors()
-    const args = await this.addRegistryToArgs([
-      ...PACKAGE_MANAGER_CONFIG[this.bin].add,
-      packageName,
-      ...(isDev ? ['-D'] : [])
-    ])
-    return executeCommand(this.bin, args, this.context)
-  }
-
-  async upgrade (packageName) {
-    const realname = stripVersion(packageName)
-    if (
-      isTestOrDebug &&
-      (packageName === '@vue/cli-service' || isOfficialPlugin(resolvePluginId(realname)))
-    ) {
-      // link packages in current repo for test
-      const src = path.resolve(__dirname, `../../../../${realname}`)
-      const dest = path.join(this.context, 'node_modules', realname)
-      await fs.remove(dest)
-      await fs.symlink(src, dest, 'dir')
-      return
+    if (process.env.VUE_CLI_TEST) {
+      try {
+        await this.runCommand('install', ['--offline'])
+      } catch (e) {
+        await this.runCommand('install')
+      }
     }
 
-    await this.setBinaryMirrors()
-    const args = await this.addRegistryToArgs([
-      ...PACKAGE_MANAGER_CONFIG[this.bin].add,
-      packageName
-    ])
-    return executeCommand(this.bin, args, this.context)
+    return await this.runCommand('install')
+  }
+
+  async add (packageName, {
+    tilde = false,
+    dev = true
+  } = {}) {
+    const args = dev ? ['-D'] : []
+    if (tilde) {
+      if (this.bin === 'yarn') {
+        args.push('--tilde')
+      } else {
+        process.env.npm_config_save_prefix = '~'
+      }
+    }
+
+    return await this.runCommand('add', [packageName, ...args])
   }
 
   async remove (packageName) {
-    const args = [
-      ...PACKAGE_MANAGER_CONFIG[this.bin].remove,
-      packageName
-    ]
-    return executeCommand(this.bin, args, this.context)
+    return await this.runCommand('remove', [packageName])
+  }
+
+  async upgrade (packageName) {
+    // manage multiple packages separated by spaces
+    const packageNamesArray = []
+
+    for (const packname of packageName.split(' ')) {
+      const realname = stripVersion(packname)
+      if (
+        isTestOrDebug &&
+        (packname === '@vue/cli-service' || isOfficialPlugin(resolvePluginId(realname)))
+      ) {
+        // link packages in current repo for test
+        const src = path.resolve(__dirname, `../../../../${realname}`)
+        const dest = path.join(this.context, 'node_modules', realname)
+        await fs.remove(dest)
+        await fs.symlink(src, dest, 'dir')
+      } else {
+        packageNamesArray.push(packname)
+      }
+    }
+
+    if (packageNamesArray.length) return await this.runCommand('add', packageNamesArray)
   }
 }
 

@@ -23,6 +23,18 @@ const defaultManifest = {
       'src': './img/icons/android-chrome-512x512.png',
       'sizes': '512x512',
       'type': 'image/png'
+    },
+    {
+      'src': './img/icons/android-chrome-maskable-192x192.png',
+      'sizes': '192x192',
+      'type': 'image/png',
+      'purpose': 'maskable'
+    },
+    {
+      'src': './img/icons/android-chrome-maskable-512x512.png',
+      'sizes': '512x512',
+      'type': 'image/png',
+      'purpose': 'maskable'
     }
   ],
   start_url: '.',
@@ -69,22 +81,26 @@ module.exports = class HtmlPwaPlugin {
 
         const assetsVersionStr = assetsVersion ? `?v=${assetsVersion}` : ''
 
-        data.head.push(
-          // Favicons
-          makeTag('link', {
+        // Favicons
+        if (iconPaths.favicon32 != null) {
+          data.head.push(makeTag('link', {
             rel: 'icon',
             type: 'image/png',
             sizes: '32x32',
             href: getTagHref(publicPath, iconPaths.favicon32, assetsVersionStr)
-          }),
-          makeTag('link', {
+          }))
+        }
+        if (iconPaths.favicon16 != null) {
+          data.head.push(makeTag('link', {
             rel: 'icon',
             type: 'image/png',
             sizes: '16x16',
             href: getTagHref(publicPath, iconPaths.favicon16, assetsVersionStr)
-          }),
+          }))
+        }
 
-          // Add to home screen for Android and modern mobile browsers
+        // Add to home screen for Android and modern mobile browsers
+        data.head.push(
           makeTag('link', manifestCrossorigin
             ? {
               rel: 'manifest',
@@ -99,9 +115,11 @@ module.exports = class HtmlPwaPlugin {
           makeTag('meta', {
             name: 'theme-color',
             content: themeColor
-          }),
+          })
+        )
 
-          // Add to home screen for Safari on iOS
+        // Add to home screen for Safari on iOS
+        data.head.push(
           makeTag('meta', {
             name: 'apple-mobile-web-app-capable',
             content: appleMobileWebAppCapable
@@ -113,22 +131,30 @@ module.exports = class HtmlPwaPlugin {
           makeTag('meta', {
             name: 'apple-mobile-web-app-title',
             content: name
-          }),
-          makeTag('link', {
+          })
+        )
+        if (iconPaths.appleTouchIcon != null) {
+          data.head.push(makeTag('link', {
             rel: 'apple-touch-icon',
             href: getTagHref(publicPath, iconPaths.appleTouchIcon, assetsVersionStr)
-          }),
-          makeTag('link', {
+          }))
+        }
+        if (iconPaths.maskIcon != null) {
+          data.head.push(makeTag('link', {
             rel: 'mask-icon',
             href: getTagHref(publicPath, iconPaths.maskIcon, assetsVersionStr),
             color: themeColor
-          }),
+          }))
+        }
 
-          // Add to home screen for Windows
-          makeTag('meta', {
+        // Add to home screen for Windows
+        if (iconPaths.msTileImage != null) {
+          data.head.push(makeTag('meta', {
             name: 'msapplication-TileImage',
             content: getTagHref(publicPath, iconPaths.msTileImage, assetsVersionStr)
-          }),
+          }))
+        }
+        data.head.push(
           makeTag('meta', {
             name: 'msapplication-TileColor',
             content: msTileColor
@@ -139,27 +165,29 @@ module.exports = class HtmlPwaPlugin {
       })
     })
 
-    compiler.hooks.emit.tapAsync(ID, (data, cb) => {
-      const {
-        name,
-        themeColor,
-        manifestPath,
-        manifestOptions
-      } = this.options
-      const publicOptions = {
-        name,
-        short_name: name,
-        theme_color: themeColor
-      }
-      const outputManifest = JSON.stringify(
-        Object.assign(publicOptions, defaultManifest, manifestOptions)
-      )
-      data.assets[manifestPath] = {
-        source: () => outputManifest,
-        size: () => outputManifest.length
-      }
-      cb(null, data)
-    })
+    if (!isHrefAbsoluteUrl(this.options.manifestPath)) {
+      compiler.hooks.emit.tapAsync(ID, (data, cb) => {
+        const {
+          name,
+          themeColor,
+          manifestPath,
+          manifestOptions
+        } = this.options
+        const publicOptions = {
+          name,
+          short_name: name,
+          theme_color: themeColor
+        }
+        const outputManifest = JSON.stringify(
+          Object.assign(publicOptions, defaultManifest, manifestOptions)
+        )
+        data.assets[manifestPath] = {
+          source: () => outputManifest,
+          size: () => outputManifest.length
+        }
+        cb(null, data)
+      })
+    }
   }
 }
 
@@ -173,8 +201,12 @@ function makeTag (tagName, attributes, closeTag = false) {
 
 function getTagHref (publicPath, href, assetsVersionStr) {
   let tagHref = `${href}${assetsVersionStr}`
-  if (!(/(http(s?)):\/\//gi.test(href))) {
+  if (!isHrefAbsoluteUrl(href)) {
     tagHref = `${publicPath}${tagHref}`
   }
   return tagHref
+}
+
+function isHrefAbsoluteUrl (href) {
+  return /(http(s?)):\/\//gi.test(href)
 }

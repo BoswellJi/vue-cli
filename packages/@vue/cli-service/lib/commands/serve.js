@@ -1,5 +1,6 @@
 const {
   info,
+  error,
   hasProjectYarn,
   hasProjectPnpm,
   openBrowser,
@@ -19,6 +20,7 @@ module.exports = (api, options) => {
     options: {
       '--open': `open browser on server start`,
       '--copy': `copy url to clipboard on server start`,
+      '--stdin': `close when stdin ends`,
       '--mode': `specify env mode (default: development)`,
       '--host': `specify host (default: ${defaults.host})`,
       '--port': `specify port (default: ${defaults.port})`,
@@ -126,9 +128,10 @@ module.exports = (api, options) => {
 
     // inject dev & hot-reload middleware entries
     if (!isProduction) {
+      const sockPath = projectDevServerOptions.sockPath || '/sockjs-node'
       const sockjsUrl = publicUrl
         // explicitly configured via devServer.public
-        ? `?${publicUrl}/sockjs-node`
+        ? `?${publicUrl}&sockPath=${sockPath}`
         : isInContainer
           // can't infer public network url if inside a container...
           // use client-side inference (note this would break with non-root publicPath)
@@ -137,9 +140,8 @@ module.exports = (api, options) => {
           : `?` + url.format({
             protocol,
             port,
-            hostname: urls.lanUrlForConfig || 'localhost',
-            pathname: '/sockjs-node'
-          })
+            hostname: urls.lanUrlForConfig || 'localhost'
+          }) + `&sockPath=${sockPath}`
       const devClients = [
         // dev server client
         require.resolve(`webpack-dev-server/client`) + sockjsUrl,
@@ -160,6 +162,12 @@ module.exports = (api, options) => {
     // create compiler
     const compiler = webpack(webpackConfig)
 
+    // handle compiler error
+    compiler.hooks.failed.tap('vue-cli-service serve', msg => {
+      error(msg)
+      process.exit(1)
+    })
+
     // create server
     const server = new WebpackDevServer(compiler, Object.assign({
       logLevel: 'silent',
@@ -171,6 +179,7 @@ module.exports = (api, options) => {
       contentBase: api.resolve('public'),
       watchContentBase: !isProduction,
       hot: !isProduction,
+      injectClient: false,
       compress: isProduction,
       publicPath: options.publicPath,
       overlay: isProduction // TODO disable this
@@ -203,6 +212,16 @@ module.exports = (api, options) => {
         })
       })
     })
+
+    if (args.stdin) {
+      process.stdin.on('end', () => {
+        server.close(() => {
+          process.exit(0)
+        })
+      })
+
+      process.stdin.resume()
+    }
 
     // on appveyor, killing the process with SIGTERM causes execa to
     // throw error

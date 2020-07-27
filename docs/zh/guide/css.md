@@ -12,7 +12,7 @@ Vue CLI 项目天生支持 [PostCSS](http://postcss.org/)、[CSS Modules](https:
 
 ``` bash
 # Sass
-npm install -D sass-loader node-sass
+npm install -D sass-loader sass
 
 # Less
 npm install -D less-loader less
@@ -100,8 +100,13 @@ module.exports = {
   css: {
     loaderOptions: {
       css: {
-        localIdentName: '[name]-[hash]',
-        camelCase: 'only'
+        // 注意：以下配置在 Vue CLI v4 与 v3 之间存在差异。
+        // Vue CLI v3 用户可参考 css-loader v1 文档
+        // https://github.com/webpack-contrib/css-loader/tree/v1.0.1
+        modules: {
+          localIdentName: '[name]-[hash]'
+        },
+        localsConvention: 'camelCaseOnly'
       }
     }
   }
@@ -121,16 +126,16 @@ module.exports = {
       sass: {
         // @/ 是 src/ 的别名
         // 所以这里假设你有 `src/variables.sass` 这个文件
-        // 注意：在 sass-loader v7 中，这个选项名是 "data"
-        prependData: `@import "~@/variables.sass"`
+        // 注意：在 sass-loader v8 中，这个选项名是 "prependData"
+        additionalData: `@import "~@/variables.sass"`
       },
       // 默认情况下 `sass` 选项会同时对 `sass` 和 `scss` 语法同时生效
       // 因为 `scss` 语法在内部也是由 sass-loader 处理的
-      // 但是在配置 `data` 选项的时候
+      // 但是在配置 `prependData` 选项的时候
       // `scss` 语法会要求语句结尾必须有分号，`sass` 则要求必须没有分号
       // 在这种情况下，我们可以使用 `scss` 选项，对 `scss` 语法进行单独配置
       scss: {
-        prependData: `@import "~@/variables.scss";`
+        additionalData: `@import "~@/variables.scss";`
       },
       // 给 less-loader 传递 Less.js 相关选项
       less:{

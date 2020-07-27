@@ -7,6 +7,7 @@ const {
   loadModule
 } = require('@vue/cli-shared-utils')
 
+const getVersions = require('./util/getVersions')
 const PackageManager = require('./util/ProjectPackageManager')
 const {
   log,
@@ -16,7 +17,7 @@ const {
 } = require('@vue/cli-shared-utils')
 const confirmIfGitDirty = require('./util/confirmIfGitDirty')
 
-async function add (pluginName, options = {}, context = process.cwd()) {
+async function add (pluginToAdd, options = {}, context = process.cwd()) {
   if (!(await confirmIfGitDirty(context))) {
     return
   }
@@ -25,14 +26,21 @@ async function add (pluginName, options = {}, context = process.cwd()) {
   const servicePkg = loadModule('@vue/cli-service/package.json', context)
   if (servicePkg && semver.satisfies(servicePkg.version, '3.x')) {
     // special internal "plugins"
-    if (/^(@vue\/)?router$/.test(pluginName)) {
+    if (/^(@vue\/)?router$/.test(pluginToAdd)) {
       return addRouter(context)
     }
-    if (/^(@vue\/)?vuex$/.test(pluginName)) {
+    if (/^(@vue\/)?vuex$/.test(pluginToAdd)) {
       return addVuex(context)
     }
   }
 
+  const pluginRe = /^(@?[^@]+)(?:@(.+))?$/
+  const [
+    // eslint-disable-next-line
+    _skip,
+    pluginName,
+    pluginVersion
+  ] = pluginToAdd.match(pluginRe)
   const packageName = resolvePluginId(pluginName)
 
   log()
@@ -41,11 +49,13 @@ async function add (pluginName, options = {}, context = process.cwd()) {
 
   const pm = new PackageManager({ context })
 
-  const cliVersion = require('../package.json').version
-  if (isOfficialPlugin(packageName) && semver.prerelease(cliVersion)) {
-    await pm.add(`${packageName}@^${cliVersion}`)
+  if (pluginVersion) {
+    await pm.add(`${packageName}@${pluginVersion}`)
+  } else if (isOfficialPlugin(packageName)) {
+    const { latestMinor } = await getVersions()
+    await pm.add(`${packageName}@~${latestMinor}`)
   } else {
-    await pm.add(packageName)
+    await pm.add(packageName, { tilde: true })
   }
 
   log(`${chalk.green('✔')}  Successfully installed plugin: ${chalk.cyan(packageName)}`)

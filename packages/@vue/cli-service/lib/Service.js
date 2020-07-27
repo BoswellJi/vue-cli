@@ -1,14 +1,13 @@
 const fs = require('fs')
 const path = require('path')
 const debug = require('debug')
-const readPkg = require('read-pkg')
 const merge = require('webpack-merge')
 const Config = require('webpack-chain')
 const PluginAPI = require('./PluginAPI')
 const dotenv = require('dotenv')
 const dotenvExpand = require('dotenv-expand')
 const defaultsDeep = require('lodash.defaultsdeep')
-const { chalk, warn, error, isPlugin, resolvePluginId, loadModule } = require('@vue/cli-shared-utils')
+const { chalk, warn, error, isPlugin, resolvePluginId, loadModule, resolvePkg } = require('@vue/cli-shared-utils')
 
 const { defaults, validate } = require('./options')
 
@@ -56,18 +55,13 @@ module.exports = class Service {
   resolvePkg (inlinePkg, context = this.context) {
     if (inlinePkg) {
       return inlinePkg
-      // 指定路径下是否存在package.json文件
-    } else if (fs.existsSync(path.join(context, 'package.json'))) {
-      const pkg = readPkg.sync({ cwd: context })
-      if (pkg.vuePlugins && pkg.vuePlugins.resolveFrom) {
-        // 将路径参数,进行路径计算后以绝对路径进行返回
-        this.pkgContext = path.resolve(context, pkg.vuePlugins.resolveFrom)
-        return this.resolvePkg(null, this.pkgContext)
-      }
-      return pkg
-    } else {
-      return {}
     }
+    const pkg = resolvePkg(context)
+    if (pkg.vuePlugins && pkg.vuePlugins.resolveFrom) {
+      this.pkgContext = path.resolve(context, pkg.vuePlugins.resolveFrom)
+      return this.resolvePkg(null, this.pkgContext)
+    }
+    return pkg
   }
 
   /**
@@ -363,8 +357,10 @@ module.exports = class Service {
       )
     }
 
-    // webpack config 入口不是函数
-    if (typeof config.entry !== 'function') {
+    if (
+      !process.env.VUE_CLI_ENTRY_FILES &&
+      typeof config.entry !== 'function'
+    ) {
       let entryFiles
       // 单一入口
       if (typeof config.entry === 'string') {
@@ -394,20 +390,33 @@ module.exports = class Service {
    * 加载用户选项参数
    */
   loadUserOptions () {
-    // vue.config.js
+    // vue.config.c?js
     let fileConfig, pkgConfig, resolved, resolvedFrom
-    const configPath = (
-      // vue-cli-service 配置文件路径 指定路径
-      process.env.VUE_CLI_SERVICE_CONFIG_PATH ||
-      // 默认路径
-      path.resolve(this.context, 'vue.config.js')
-    )
-    // 配置文件存在
-    if (fs.existsSync(configPath)) {
+    const esm = this.pkg.type && this.pkg.type === 'module'
+
+    const possibleConfigPaths = [
+      process.env.VUE_CLI_SERVICE_CONFIG_PATH,
+      './vue.config.js',
+      './vue.config.cjs'
+    ]
+
+    let fileConfigPath
+    for (const p of possibleConfigPaths) {
+      const resolvedPath = p && path.resolve(this.context, p)
+      if (resolvedPath && fs.existsSync(resolvedPath)) {
+        fileConfigPath = resolvedPath
+        break
+      }
+    }
+
+    if (fileConfigPath) {
+      if (esm && fileConfigPath === './vue.config.js') {
+        throw new Error(`Please rename ${chalk.bold('vue.config.js')} to ${chalk.bold('vue.config.cjs')} when ECMAScript modules is enabled`)
+      }
+
       try {
-        // 加载配置文件
-        fileConfig = require(configPath)
-        // 函数
+        fileConfig = loadModule(fileConfigPath, this.context)
+
         if (typeof fileConfig === 'function') {
           // 调用返回值
           fileConfig = fileConfig()
@@ -415,14 +424,14 @@ module.exports = class Service {
 
         // 配置文件不存在, 文件不是对象
         if (!fileConfig || typeof fileConfig !== 'object') {
-          // 报错
+          // TODO: show throw an Error here, to be fixed in v5
           error(
-            `Error loading ${chalk.bold('vue.config.js')}: should export an object or a function that returns object.`
+            `Error loading ${chalk.bold(fileConfigPath)}: should export an object or a function that returns object.`
           )
           fileConfig = null
         }
       } catch (e) {
-        error(`Error loading ${chalk.bold('vue.config.js')}:`)
+        error(`Error loading ${chalk.bold(fileConfigPath)}:`)
         throw e
       }
     }

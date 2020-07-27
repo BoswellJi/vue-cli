@@ -37,10 +37,11 @@ module.exports = api => {
       `https://sysgears.github.io/mochapack/docs/installation/cli-usage.html`
     )
   }, (args, rawArgv) => {
-    const inspectPos = rawArgv.indexOf('--inspect-brk')
     let nodeArgs = []
+
+    const inspectPos = rawArgv.findIndex(arg => arg.startsWith('--inspect-brk'))
     if (inspectPos !== -1) {
-      nodeArgs = rawArgv.splice(inspectPos, inspectPos + 1)
+      nodeArgs = rawArgv.splice(inspectPos, 1)
     }
     // for @vue/babel-preset-app <= v4.0.0-rc.7
     process.env.VUE_CLI_BABEL_TARGET_NODE = true

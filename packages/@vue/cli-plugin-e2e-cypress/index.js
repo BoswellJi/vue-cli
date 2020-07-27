@@ -14,7 +14,6 @@ module.exports = (api, options) => {
       `All Cypress CLI options are also supported:\n` +
       chalk.yellow(`https://docs.cypress.io/guides/guides/command-line.html#cypress-run`)
   }, async (args, rawArgs) => {
-    removeArg(rawArgs, 'headless', 0)
     removeArg(rawArgs, 'mode')
     removeArg(rawArgs, 'url')
     removeArg(rawArgs, 'config')
@@ -54,9 +53,10 @@ module.exports.defaultModes = {
 }
 
 function removeArg (rawArgs, argToRemove, offset = 1) {
-  const matchRE = new RegExp(`^--${argToRemove}`)
+  const matchRE = new RegExp(`^--${argToRemove}$`)
   const equalRE = new RegExp(`^--${argToRemove}=`)
-  const i = rawArgs.findIndex(arg => matchRE.test(arg))
+
+  const i = rawArgs.findIndex(arg => matchRE.test(arg) || equalRE.test(arg))
   if (i > -1) {
     rawArgs.splice(i, offset + (equalRE.test(rawArgs[i]) ? 0 : 1))
   }
