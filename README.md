@@ -24,6 +24,21 @@ testing： 测试 n
 
 ## Packages
 
+- webpack-chain
+```
+使用一个链式api来生成和简化2-4版本的webpack配置的修改
+```
+
+- rc
+```
+给懒人用的，不可配置的配置加载器
+```
+
+- cross-env
+```
+跨平台设置环境变量
+```
+
 - address
 ```
 获取当前机器的ip，mac,和dns服务器

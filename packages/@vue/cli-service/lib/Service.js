@@ -323,10 +323,15 @@ module.exports = class Service {
     return fn(args, rawArgv)
   }
 
+  /**
+   * 解析可链接的webpack config
+   */
   resolveChainableWebpackConfig () {
     // 生成和简化webpack config的链式api
     const chainableConfig = new Config()
     // apply chains 调用函数,添加 配置链, 获取webpackChain 中配置的webpack配置信息
+    // this.webpackChainFns 是从过chainWebpack方法添加的webpack配置(值为function)
+    // chainableConfig Config对象是这些配置函数的参数
     this.webpackChainFns.forEach(fn => fn(chainableConfig))
     return chainableConfig
   }

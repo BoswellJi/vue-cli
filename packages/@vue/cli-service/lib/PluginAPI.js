@@ -62,6 +62,7 @@ class PluginAPI {
   }
 
   /**
+   * 检查是否已经存在一个插件
    * Check if the project has a given plugin.
    *
    * @param {string} id - Plugin id, can omit the (@vue/|vue-|@scope/vue)-cli-plugin- prefix
@@ -72,6 +73,7 @@ class PluginAPI {
   }
 
   /**
+   * 注册一个将会变成在vue-cli-service上获得的命令
    * Register a command that will become available as `vue-cli-service [name]`.
    *
    * @param {string} name 命令名称
@@ -89,6 +91,7 @@ class PluginAPI {
       fn = opts
       opts = null
     }
+    // 将命令添加到service中
     this.service.commands[name] = { fn, opts: opts || {}}
   }
 
@@ -130,6 +133,7 @@ class PluginAPI {
   }
 
   /**
+   * 解析最终的将被传递到webpack的webpack配置
    * Resolve the final raw webpack config, that will be passed to webpack.
    *
    * @param {ChainableWebpackConfig} [chainableConfig]

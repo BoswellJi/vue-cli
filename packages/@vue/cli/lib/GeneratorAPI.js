@@ -206,8 +206,11 @@ class GeneratorAPI {
   }
 
   /**
+   * 扩展项目的package.json
    * Extend the package.json of the project.
+   * 还在插件中间解析依赖冲突
    * Also resolves dependency conflicts between plugins.
+   * 文件被写入到磁盘之前，工具配置字段可能被提取到单独的文件
    * Tool configuration fields may be extracted into standalone files before
    * files are written to disk.
    *
