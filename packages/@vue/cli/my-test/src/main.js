@@ -1,8 +1,5 @@
-import Vue from 'vue'
-import App from './App.vue'
+import { sum, say } from './test';
 
-Vue.config.productionTip = false
+sum();
 
-new Vue({
-  render: h => h(App),
-}).$mount('#app')
+// say();

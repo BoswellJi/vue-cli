@@ -291,7 +291,7 @@ module.exports = class Service {
     // resolve mode
     // prioritize inline --mode
     // fallback to resolved default modes from plugins or development if --watch is defined
-    const mode = args.mode || (name === 'build' && args.watch ? 'development' : this.modes[name])
+    const mode = 'development' || args.mode || (name === 'build' && args.watch ? 'development' : this.modes[name])
 
     // 初始化期间跳过插件的安装
     // --skip-plugins arg may have plugins that should be skipped during init()
@@ -412,6 +412,7 @@ module.exports = class Service {
     }
 
     // 最终的webpack 配置
+    // console.log(JSON.stringify(config))
     return config
   }
 

@@ -49,23 +49,23 @@ const command = args._[0]
  */
 
 // 调用service类的run
-// service.run(command, args, rawArgv).catch(err => {
-//   error(err)
-//   process.exit(1)
-// })
-
-service.run('serve', {
-  _: ['serve', '@vue/cli-plugin-a'],
-  modern: false,
-  report: false,
-  'report-json': false,
-  'inline-vue': false,
-  watch: false,
-  open: false,
-  copy: false,
-  https: false,
-  verbose: false
-}, [ 'serve', '@vue/cli-plugin-a' ]).catch(err => {
+service.run(command, args, rawArgv).catch(err => {
   error(err)
   process.exit(1)
 })
+
+// service.run('serve', {
+//   _: ['serve'],
+//   modern: false,
+//   report: false,
+//   'report-json': false,
+//   'inline-vue': false,
+//   watch: false,
+//   open: false,
+//   copy: false,
+//   https: false,
+//   verbose: false
+// }, [ 'serve' ]).catch(err => {
+//   error(err)
+//   process.exit(1)
+// })

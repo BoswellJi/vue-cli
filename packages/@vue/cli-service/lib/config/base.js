@@ -30,7 +30,8 @@ module.exports = (api, options) => {
       .context(api.service.context)
       .entry('app')
         // .add('./src/main.js')
-        .add('./src/main.js')
+        // .add('./src/main.js')
+        .add('E:/other/vue/vue-cli/packages/@vue/cli/my-test/src/main.js')
         .end()
       .output
         .path(api.resolve(options.outputDir))
