@@ -4,7 +4,7 @@ const { semver, error } = require('@vue/cli-shared-utils')
 const requiredVersion = require('../package.json').engines.node
 
 // 首先查看node的版本是否满足cli-service项目
-if (!semver.satisfies(process.version, requiredVersion)) {
+if (!semver.satisfies(process.version, requiredVersion, { includePrerelease: true })) {
   error(
     `You are using Node ${process.version}, but vue-cli-service ` +
     `requires Node ${requiredVersion}.\nPlease upgrade your Node version.`
