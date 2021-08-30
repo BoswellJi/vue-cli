@@ -14,7 +14,8 @@ const officialPlugins = [
   'typescript',
   'unit-jest',
   'unit-mocha',
-  'vuex'
+  'vuex',
+  'webpack-4'
 ]
 
 // 的是vue-cli插件

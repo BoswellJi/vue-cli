@@ -27,6 +27,17 @@ module.exports = {
 }
 ```
 
+Or, you can use the `defineConfig` helper from `@vue/cli-service`, which could provide better intellisense support:
+
+```js
+// vue.config.js
+const { defineConfig } = require('@vue/cli-service')
+
+module.exports = defineConfig({
+  // options...
+})
+```
+
 ### baseUrl
 
 Deprecated since Vue CLI 3.3, please use [`publicPath`](#publicPath) instead.
@@ -65,7 +76,7 @@ Deprecated since Vue CLI 3.3, please use [`publicPath`](#publicPath) instead.
 - Type: `string`
 - Default: `'dist'`
 
-  The directory where the production build files will be generated in when running `vue-cli-service build`. Note the target directory will be removed before building (this behavior can be disabled by passing `--no-clean` when building).
+  The directory where the production build files will be generated in when running `vue-cli-service build`. Note the target directory contents will be removed before building (this behavior can be disabled by passing `--no-clean` when building).
 
   ::: tip
   Always use `outputDir` instead of modifying webpack `output.path`.
@@ -183,10 +194,12 @@ Deprecated since Vue CLI 3.3, please use [`publicPath`](#publicPath) instead.
 
 ### transpileDependencies
 
-- Type: `Array<string | RegExp>`
-- Default: `[]`
+- Type: `boolean | Array<string | RegExp>`
+- Default: `false`
 
-  By default `babel-loader` ignores all files inside `node_modules`. If you want to explicitly transpile a dependency with Babel, you can list it in this option.
+  By default `babel-loader` ignores all files inside `node_modules`. You can enable this option to avoid unexpected untranspiled code from third-party dependencies.
+
+  Transpiling all the dependencies could slow down the build process, though. If build performance is a concern, you can explicitly transpile only some of the dependencies by passing an array of package names or name patterns to this option.
 
 ::: warning Jest config
 This option is not respected by the [cli-unit-jest plugin](#jest), because in jest, we don't have to transpile code from `/node_modules` unless it uses non-standard features - Node >8.11 supports the latest ECMAScript features already.
@@ -245,29 +258,16 @@ See [the plugin's README](https://github.com/vuejs/vue-cli/blob/dev/packages/%40
 
 ### css.modules
 
-Deprecated since v4, please use [`css.requireModuleExtension`](#css-requireModuleExtension) instead.
-
-In v3 this means the opposite of `css.requireModuleExtension`.
-
 ### css.requireModuleExtension
 
-- Type: `boolean`
-- Default: `true`
-
-  By default, only files that ends in `*.module.[ext]` are treated as CSS modules. Setting this to `false` will allow you to drop `.module` in the filenames and treat all `*.(css|scss|sass|less|styl(us)?)` files as CSS modules.
-
-  ::: tip
-  If you have customized CSS Modules configurations in `css.loaderOptions.css`, then the `css.requireModuleExtension` field must be explicitly configured to `true` or `false`, otherwise we can't be sure whether you want to apply these options to all CSS files or not.
-  :::
-
-  See also: [Working with CSS > CSS Modules](../guide/css.md#css-modules)
+Both removed in v5, see [Working with CSS > CSS Modules](../guide/css.md#css-modules) for guidance on how to treat all style imports as CSS Modules.
 
 ### css.extract
 
 - Type: `boolean | Object`
 - Default: `true` in production, `false` in development
 
-  Whether to extract CSS in your components into a standalone CSS files (instead of inlined in JavaScript and injected dynamically).
+  Whether to extract CSS in your components into a standalone CSS file (instead of inlined in JavaScript and injected dynamically).
 
   This is always disabled when building as web components (styles are inlined and injected into shadowRoot).
 
@@ -372,6 +372,16 @@ In v3 this means the opposite of `css.requireModuleExtension`.
     }
   }
   ```
+
+### devServer.inline
+
+- Type: `boolean`
+- Default: `true`
+
+  Toggle between the dev-server's two different modes. See [devServer.inline](https://webpack.js.org/configuration/dev-server/#devserverinline) for more details. Note that:
+
+  - To use the `iframe mode` no additional configuration is needed. Just navigate the browser to `http://<host>:<port>/webpack-dev-server/<path>` to debug your app. A notification bar with messages will appear at the top of your app.
+  - To use the `inline mode`, just navigate to `http://<host>:<port>/<path>` to debug your app. The build messages will appear in the browser console.
 
 ### parallel
 

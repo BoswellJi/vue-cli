@@ -28,7 +28,6 @@ const {
 const {
   chalk,
   execa,
-  semver,
 
   log,
   warn,
@@ -112,16 +111,6 @@ module.exports = class Creator extends EventEmitter {
       }
     }
 
-    // Introducing this hack because typescript plugin must be invoked after router.
-    // Currently we rely on the `plugins` object enumeration order,
-    // which depends on the order of the field initialization.
-    // FIXME: Remove this ugly hack after the plugin ordering API settled down
-    if (preset.plugins['@vue/cli-plugin-router'] && preset.plugins['@vue/cli-plugin-typescript']) {
-      const tmp = preset.plugins['@vue/cli-plugin-typescript']
-      delete preset.plugins['@vue/cli-plugin-typescript']
-      preset.plugins['@vue/cli-plugin-typescript'] = tmp
-    }
-
     // legacy support for vuex
     if (preset.vuex) {
       preset.plugins['@vue/cli-plugin-vuex'] = {}
@@ -161,7 +150,7 @@ module.exports = class Creator extends EventEmitter {
 
       if (!version) {
         if (isOfficialPlugin(dep) || dep === '@vue/cli-service' || dep === '@vue/babel-preset-env') {
-          version = isTestOrDebug ? `file:${path.resolve(__dirname, '../../../', dep)}` : `~${latestMinor}`
+          version = isTestOrDebug ? `latest` : `~${latestMinor}`
         } else {
           version = 'latest'
         }
@@ -183,15 +172,6 @@ module.exports = class Creator extends EventEmitter {
 
       await writeFileTree(context, {
         '.npmrc': pnpmConfig
-      })
-    }
-
-    if (packageManager === 'yarn' && semver.satisfies(process.version, '8.x')) {
-      // Vue CLI 4.x should support Node 8.x,
-      // but some dependenices already bumped `engines` field to Node 10
-      // and Yarn treats `engines` field too strictly
-      await writeFileTree(context, {
-        '.yarnrc': '# Hotfix for Node 8.x\n--install.ignore-engines true\n'
       })
     }
 
@@ -259,7 +239,6 @@ module.exports = class Creator extends EventEmitter {
 
     // commit initial state
     let gitCommitFailed = false
-    let gpgSign = false
     if (shouldInitGit) {
       await run('git add -A')
       if (isTestOrDebug) {
@@ -267,14 +246,6 @@ module.exports = class Creator extends EventEmitter {
         await run('git', ['config', 'user.email', 'test@test.com'])
         await run('git', ['config', 'commit.gpgSign', 'false'])
       }
-      gpgSign = await (async () => {
-        const { stdout: gpgSignConfig } = await run('git', [
-          'config',
-          '--get',
-          'commit.gpgSign'
-        ])
-        return gpgSignConfig === 'true'
-      })()
       const msg = typeof cliOptions.git === 'string' ? cliOptions.git : 'init'
       try {
         await run('git', ['commit', '-m', msg, '--no-verify'])
@@ -298,7 +269,7 @@ module.exports = class Creator extends EventEmitter {
 
     if (gitCommitFailed) {
       warn(
-        `Skipped git commit due to missing username and email in git config${gpgSign ? ' or failed to sign commit' : ''}.\n` +
+        `Skipped git commit due to missing username and email in git config, or failed to sign commit.\n` +
         `You will need to perform the initial commit yourself.\n`
       )
     }
@@ -431,7 +402,7 @@ module.exports = class Creator extends EventEmitter {
       if (name === 'default') {
         displayName = 'Default'
       } else if (name === '__default_vue_3__') {
-        displayName = 'Default (Vue 3 Preview)'
+        displayName = 'Default (Vue 3)'
       }
 
       return {

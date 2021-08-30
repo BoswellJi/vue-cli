@@ -2,13 +2,8 @@ const path = require('path')
 const hash = require('hash-sum')
 const { semver, matchesPluginId } = require('@vue/cli-shared-utils')
 
-// 这个是给cli-service注册插件
-
-// 注意: 如果一个被注册的插件命令需要在一个特定模式中运行
 // Note: if a plugin-registered command needs to run in a specific default mode,
-// 那么这个插件就需要在{ [commandName]: mode }格式中通过`module.exports.defaultModes`来暴露它
 // the plugin needs to expose it via `module.exports.defaultModes` in the form
-// 这是因为加载用户选项/应用插件之前命令模式需要知道和被应用
 // of { [commandName]: mode }. This is because the command mode needs to be
 // known and applied before loading user options / applying plugins.
 
@@ -62,7 +57,6 @@ class PluginAPI {
   }
 
   /**
-   * 检查是否已经存在一个插件
    * Check if the project has a given plugin.
    *
    * @param {string} id - Plugin id, can omit the (@vue/|vue-|@scope/vue)-cli-plugin- prefix
@@ -73,17 +67,16 @@ class PluginAPI {
   }
 
   /**
-   * 注册一个将会变成在vue-cli-service上获得的命令
    * Register a command that will become available as `vue-cli-service [name]`.
    *
-   * @param {string} name 命令名称
+   * @param {string} name
    * @param {object} [opts]
    *   {
    *     description: string,
    *     usage: string,
    *     options: { [string]: string }
    *   }
-   * @param {function} fn 命令的执行函数
+   * @param {function} fn
    *   (args: { [string]: string }, rawArgs: string[]) => ?Promise
    */
   registerCommand (name, opts, fn) {
@@ -91,14 +84,11 @@ class PluginAPI {
       fn = opts
       opts = null
     }
-    // 将命令添加到service中
-    this.service.commands[name] = { fn, opts: opts || {}}
+    this.service.commands[name] = { fn, opts: opts || {} }
   }
 
   /**
-   * 注册一个将要接收一个可链的webpack 配置文件
    * Register a function that will receive a chainable webpack config
-   * 函数是惰性的，直到resolveWebpackConfig被调用之前，是不会被调用的
    * the function is lazy and won't be called until `resolveWebpackConfig` is
    * called
    *
@@ -133,7 +123,6 @@ class PluginAPI {
   }
 
   /**
-   * 解析最终的将被传递到webpack的webpack配置
    * Resolve the final raw webpack config, that will be passed to webpack.
    *
    * @param {ChainableWebpackConfig} [chainableConfig]
@@ -174,13 +163,18 @@ class PluginAPI {
     const variables = {
       partialIdentifier,
       'cli-service': require('../package.json').version,
-      'cache-loader': require('cache-loader/package.json').version,
       env: process.env.NODE_ENV,
       test: !!process.env.VUE_CLI_TEST,
       config: [
         fmtFunc(this.service.projectOptions.chainWebpack),
         fmtFunc(this.service.projectOptions.configureWebpack)
       ]
+    }
+
+    try {
+      variables['cache-loader'] = require('cache-loader/package.json').version
+    } catch (e) {
+      // cache-loader is only intended to be used for webpack 4
     }
 
     if (!Array.isArray(configFiles)) {
