@@ -16,12 +16,10 @@ if (!semver.satisfies(process.version, requiredVersion, { includePrerelease: tru
 const Service = require('../lib/Service')
 // 实例化Service类  参数: node进程的环境变量 VUE_CLI_CONTEXT || 当前执行文件的地址
 // const service = new Service(process.env.VUE_CLI_CONTEXT || process.cwd())
-// 
-const service = new Service('E:\\other\\vue\\vue-cli\\packages\\@vue\\cli\\my-test')
+const service = new Service('D:\\code\\vue-cli\\vue1')
 
 // 获取进程参数,前两个参数为 node执行文件地址,当前被执行文件地址, 命令行中的参数,所以从索引2开始取得是命令行中得参数
 const rawArgv = process.argv.slice(2)
-
 
 // 获取的是单个 参数的选项
 const args = require('minimist')(rawArgv, {
@@ -43,11 +41,6 @@ const args = require('minimist')(rawArgv, {
 })
 // 获取单个参数中的第一个
 const command = args._[0]
-
-/**
- *   
-
- */
 
 // 调用service类的run
 service.run(command, args, rawArgv).catch(err => {

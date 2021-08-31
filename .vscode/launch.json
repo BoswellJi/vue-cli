@@ -4,14 +4,26 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Launch Program cli",
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}\\packages\\@vue\\cli-service\\bin\\vue-cli-service.js"
+      "program": "${workspaceFolder}\\packages\\@vue\\cli\\bin\\vue.js",
+      "args": ["create","vue1"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program service",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}\\packages\\@vue\\cli-service\\bin\\vue-cli-service.js",
+      "args": ["serve"]
     }
   ]
 }

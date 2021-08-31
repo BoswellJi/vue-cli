@@ -15,13 +15,6 @@ Please see [contributing guide](https://github.com/vuejs/vue-cli/blob/dev/.githu
 
 [MIT](https://github.com/vuejs/vue-cli/blob/dev/LICENSE)
 
-## Words
-```
-mostly: 主要地 adv
-testing： 测试 n
-
-```
-
 ## Packages
 
 - webpack-chain
@@ -83,3 +76,15 @@ testing： 测试 n
 ```
 没有被包含在原生fs模块中的文件系统方法，并且给fs方法添加promise支持
 ```
+
+- [leven](https://github.com/sindresorhus/leven)
+
+- [slash](https://github.com/sindresorhus/slash)
+
+- [minimist](https://github.com/substack/minimist)
+
+- [commander](https://github.com/tj/commander.js)
+
+- [envinfo](https://github.com/tabrindle/envinfo)
+
+- [semver](https://github.com/semver/semver)
